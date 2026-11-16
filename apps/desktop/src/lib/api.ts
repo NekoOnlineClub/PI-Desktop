@@ -1,4 +1,5 @@
 import type { ReviewContextLines, ReviewContextResult, ReviewTurnsPage, ReviewChangesPage } from "@pi-desktop/shared";
+import type { CatspubState, CatspubLoginInput, CatspubBrowserMethod, CatspubCaptchaRequest } from "@pi-desktop/shared";
 type ClipboardDirectoryPaste = {
   items: Array<{ kind: "directory"; path: string; name: string } | { kind: "file"; name: string }>;
   token: string | null;
@@ -741,6 +742,17 @@ function normalizePlansChangedEvent(value: unknown): PlanningStateEvent {
 }
 
 export const api = {
+  catspubState: () => invoke<CatspubState>(IPC.invoke.catspubState),
+  catspubCaptchaStart: (request: CatspubCaptchaRequest) => invoke<{ ready: true }>(IPC.invoke.catspubCaptchaStart, request),
+  catspubCaptchaUpdate: (request: CatspubCaptchaRequest) => invoke<void>(IPC.invoke.catspubCaptchaUpdate, request),
+  catspubCaptchaCancel: (id: string) => invoke<void>(IPC.invoke.catspubCaptchaCancel, id),
+  catspubLogin: (input: CatspubLoginInput) => invoke<CatspubState>(IPC.invoke.catspubLogin, input),
+  catspubVerify: (code: string) => invoke<CatspubState>(IPC.invoke.catspubVerify, code),
+  catspubBrowserLogin: (method: CatspubBrowserMethod, rememberLogin: boolean) =>
+    invoke<CatspubState>(IPC.invoke.catspubBrowserLogin, { method, rememberLogin }),
+  catspubCancel: () => invoke<CatspubState>(IPC.invoke.catspubCancel),
+  catspubRefresh: () => invoke<CatspubState>(IPC.invoke.catspubRefresh),
+  catspubLogout: () => invoke<{ revoked: boolean }>(IPC.invoke.catspubLogout),
   getVersion: () => invoke<AppVersionInfo>(IPC.invoke.appGetVersion),
   health: () => invoke<HostHealth>(IPC.invoke.appHealth),
   getOnboarding: () => invoke<OnboardingState>(IPC.invoke.appGetOnboarding),
@@ -864,7 +876,7 @@ export const api = {
   configureSession: (
     id: string,
     config: Pick<SessionSummary, "mode" | "providerId" | "modelId"> &
-      Partial<Pick<SessionSummary, "thinkingLevel" | "permissionMode" | "fastMode">>,
+      Partial<Pick<SessionSummary, "thinkingLevel" | "permissionMode" | "fastMode" | "contextWindowLimit">>,
   ) =>
     invoke<{ session: SessionSummary }>(
       IPC.invoke.sessionConfigure,

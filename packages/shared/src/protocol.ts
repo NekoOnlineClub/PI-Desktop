@@ -1,5 +1,5 @@
 export const PROTOCOL_VERSION = 11 as const;
-export const SCHEMA_VERSION = 16 as const;
+export const SCHEMA_VERSION = 33 as const;
 export const APP_ID = "net.aiuo.pi-desktop";
 export const APP_NAME = "PI-Desktop";
 export const APP_VERSION = "0.23.0-beta.1";
@@ -70,6 +70,16 @@ export type LifecycleDialogRequest = {
 export type LifecycleDialogDismiss = { requestId: string };
 export const IPC = {
   invoke: {
+    catspubState: "pi-desktop/catspub/state",
+    catspubLogin: "pi-desktop/catspub/login",
+    catspubVerify: "pi-desktop/catspub/verify",
+    catspubBrowserLogin: "pi-desktop/catspub/browserLogin",
+    catspubCancel: "pi-desktop/catspub/cancel",
+    catspubRefresh: "pi-desktop/catspub/refresh",
+    catspubLogout: "pi-desktop/catspub/logout",
+    catspubCaptchaStart: "pi-desktop/catspub/captchaStart",
+    catspubCaptchaUpdate: "pi-desktop/catspub/captchaUpdate",
+    catspubCaptchaCancel: "pi-desktop/catspub/captchaCancel",
     storageGet: "pi-desktop/storage/get",
     storageChoose: "pi-desktop/storage/choose",
     storageMigrate: "pi-desktop/storage/migrate",

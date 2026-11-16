@@ -614,6 +614,7 @@ export function registerAgentIpc({
     // provenance Main-owned and tied to the durable turn, never the prompt text.
     if (isTrustedCompletionNotice) completionNoticeTurns.add(durableTurnId);
     try {
+      launch.assertCurrentAccount?.();
       result = await sidecar.call<{ accepted: boolean; turnId: string }>(
         "agent.prompt",
         {
@@ -739,6 +740,7 @@ export function registerAgentIpc({
     try {
       let result: unknown;
       try {
+        launch.assertCurrentAccount?.();
         result = await sidecar.call("agent.compact", launch.sidecarParams);
       } catch (error) {
         if (!isRpcTimeoutError(error)) throw error;

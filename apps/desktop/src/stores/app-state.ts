@@ -116,6 +116,7 @@ export type DraftSessionConfiguration = {
   permissionMode?: PermissionMode;
   /** Session `/fast` switch carried into the created session (ADR 0334). */
   fastMode?: boolean;
+  contextWindowLimit?: number | null;
 };
 
 
@@ -237,6 +238,7 @@ export type AppState = {
     thinkingLevel: SessionThinkingLevel;
     permissionMode?: PermissionMode;
     fastMode?: boolean;
+    contextWindowLimit?: number | null;
   }) => Promise<void>;
   /** Returns true once accepted unless concurrent smart Stop restores it. */
   sendPrompt: (

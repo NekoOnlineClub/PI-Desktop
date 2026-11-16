@@ -65,11 +65,13 @@ export type SessionCapabilityDefaults = {
 export type ProviderCatalogRuntimeDependencies = {
   getHost: () => HostProcess | null;
   modelsDevCatalog: ModelsDevCatalog;
+  siteProviders?: () => Promise<import("@pi-desktop/shared").ProviderPublic[]>;
 };
 
 export function createProviderCatalogRuntime({
   getHost,
   modelsDevCatalog,
+  siteProviders,
 }: ProviderCatalogRuntimeDependencies) {
   const bindingForModel = (
     provider: Pick<RuntimeProvider, "models">,
@@ -349,6 +351,7 @@ export function createProviderCatalogRuntime({
   };
 
   const listRuntimeProviders = async (includeDisabled = true) => {
+    if (siteProviders) return siteProviders();
     const host = getHost();
     if (!host) throw new Error("host unavailable");
     const result = await host.call<{ providers: RuntimeProvider[] }>(

@@ -16,7 +16,7 @@ const [toolbarSource, modelPickerSource] = await Promise.all([
 ]);
 const composerSource = `${toolbarSource}\n${modelPickerSource}`;
 
-test("narrow composer containers progressively simplify the model controls", () => {
+test("narrow composer containers wrap controls while retaining the model and reasoning labels", () => {
   assert.match(
     styles,
     /\.composer-stack\s*\{[\s\S]*?container-type:\s*inline-size;[\s\S]*?container-name:\s*composer-stack;/,
@@ -25,24 +25,11 @@ test("narrow composer containers progressively simplify the model controls", () 
   assert.match(styles, /\.composer-model-thinking\s*\{[\s\S]*?min-width:\s*0;/);
   assert.match(
     styles,
-    /@container composer-stack \(max-width: 560px\)[\s\S]*?\.composer-model-thinking-level[\s\S]*?display:\s*none;/,
+    /@container composer-stack \(max-width: 560px\)[\s\S]*?\.composer-toolbar\s*\{[^}]*flex-wrap:\s*wrap;/,
   );
   assert.match(
     styles,
     /@container composer-stack \(max-width: 480px\)[\s\S]*?\.composer-model-thinking-model\s*\{[\s\S]*?max-width:\s*96px;/,
-  );
-  assert.match(
-    styles,
-    /@container composer-stack \(max-width: 450px\)[\s\S]*?\.composer-right \.composer-model-thinking-chip[\s\S]*?width:\s*32px;/,
-  );
-  assert.match(
-    styles,
-    /\.composer-model-thinking-model,\s*\.composer-model-thinking-chevron\s*\{[\s\S]*?display:\s*none;/,
-  );
-  // The collapsed chip keeps a glyph: the labels it drops are what name it.
-  assert.match(
-    styles,
-    /@container composer-stack \(max-width: 450px\)[\s\S]*?\.composer-model-thinking-icon\s*\{[\s\S]*?display:\s*inline-flex;/,
   );
 });
 

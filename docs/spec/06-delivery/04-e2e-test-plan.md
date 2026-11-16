@@ -1,5 +1,30 @@
 # 04. E2E Test Plan
 
+### E2E-CATSPUB-account-model-context
+
+- Preconditions: build Desktop dependencies, renderer/preload and the Rust Host.
+  Run `pnpm test:e2e:catspub` with an isolated profile/database and controlled
+  site HTTP boundary. No real credentials or model execution are required.
+- Steps: submit password login, solve CAPTCHA and MFA; inspect the bottom-left
+  profile; refresh a changed balance; open the grouped composer model picker;
+  select 32K and read the session through the Rust Host; sign out while offline;
+  sign in with GitHub as another user, then with a virtual Passkey authenticator.
+- Expected: only entitled group models appear; context persists as 32000 and
+  excessive tiers are disabled; profile shows username, ID and converted wallet;
+  account switching removes old model access while retaining local history;
+  no remembered secret exists when Remember login is off; WebAuthn uses the real
+  `https://catspub.com` RP origin. Desktop and narrow screenshots are nonblank and
+  controls do not overflow. Sign-in retains native-platform window controls.
+  The actual sidebar displays `Pi-Desktop[Catspub]` at its minimum width with no
+  footer version; the actual composer keeps model and reasoning labels visible
+  after switching models and at narrow widths.
+  CAPTCHA mounts inside the login form on the real site origin with no preload
+  bridge or additional BrowserWindow; the embedded view closes after success.
+- Specs: [Catspub client](../04-ux/catspub-client.md),
+  [account architecture](../../adr/catspub-managed-login.md).
+- Acceptance: service/contract tests, Host context migration/session tests and
+  the Electron user path pass. Milestone: Catspub distribution. Status: automated.
+
 ### E2E-USAGE-explicit-zero-cache
 
 - Complete a controlled Pi request with nonzero input/output and explicit zero

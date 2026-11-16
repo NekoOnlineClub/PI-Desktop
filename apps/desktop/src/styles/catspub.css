@@ -1,0 +1,44 @@
+.catspub-login { min-height: 100dvh; display: grid; place-items: center; padding: 60px 24px 36px; background: var(--ds-bg-primary); color: var(--ds-text-primary); overflow: auto; }
+.catspub-login-drag { position: fixed; inset: 0 0 auto; height: var(--ds-toolbar-height); -webkit-app-region: drag; }
+.catspub-login-form { width: min(100%, 344px); }
+.catspub-login-logo { width: 48px; height: 48px; object-fit: contain; margin-bottom: 16px; }
+.catspub-login h1 { font-size: var(--text-2xl); line-height: var(--leading-tighter); font-weight: var(--font-weight-semibold); letter-spacing: 0; }
+.catspub-login-site { margin: 5px 0 30px; color: var(--ds-text-muted); font-size: var(--text-md); }
+.catspub-login h2 { font-size: var(--text-lg); font-weight: var(--font-weight-semibold); margin-bottom: 24px; }
+.catspub-login form { display: flex; flex-direction: column; gap: 18px; }
+.catspub-login .btn { display: inline-flex; justify-content: center; align-items: center; gap: 9px; min-height: 38px; }
+.catspub-login-submit { width: 100%; margin-top: 4px; }
+.catspub-captcha { display: grid; gap: 8px; }
+.catspub-captcha-label { font-size: var(--text-sm); color: var(--ds-text-secondary); }
+.catspub-captcha-field { height: 80px; min-width: 0; display: grid; place-items: center; }
+.catspub-captcha-field > span { display: inline-flex; align-items: center; gap: 9px; font-size: var(--text-sm); color: var(--ds-text-secondary); }
+.catspub-captcha-field[data-status="ready"] { background: var(--ds-bg-chip); border-radius: var(--radius-sm); }
+.catspub-login-divider { border-top: 1px solid var(--ds-border-subtle); margin: 24px 0 18px; }
+.catspub-login-alternatives { display: flex; gap: 10px; }
+.catspub-login-alternatives > * { flex: 1; }
+.catspub-login-cancel { width: 100%; margin-top: 12px; }
+.catspub-loading { display: flex; align-items: center; gap: 12px; min-height: 60px; }
+.catspub-error { font-size: var(--text-md); line-height: var(--leading-prose); color: var(--ds-error); margin: 12px 0; overflow-wrap: anywhere; }
+.catspub-spin { animation: catspub-spin 1s linear infinite; }
+@keyframes catspub-spin { to { transform: rotate(360deg); } }
+.catspub-profile { width: min(316px, calc(100vw - 24px)); max-width: calc(100vw - 24px); padding: 18px; overflow: auto; }
+.catspub-profile-heading { display: flex; gap: 10px; align-items: center; font-size: var(--text-base); margin-bottom: 18px; }
+.catspub-profile dl { display: grid; gap: 14px; }
+.catspub-profile dl > div { display: grid; grid-template-columns: 90px minmax(0, 1fr); gap: 10px; align-items: baseline; }
+.catspub-profile dt { font-size: var(--text-sm); color: var(--ds-text-secondary); }
+.catspub-profile dd { text-align: right; overflow-wrap: anywhere; font-size: var(--text-md); }
+.catspub-balance { color: var(--ds-text-primary); font-variant-numeric: tabular-nums; font-weight: var(--font-weight-semibold); }
+.catspub-profile-actions { display: flex; gap: 8px; justify-content: space-between; border-top: 1px solid var(--ds-border-subtle); padding-top: 14px; margin-top: 18px; }
+.catspub-profile-actions .btn { display: inline-flex; gap: 7px; align-items: center; }
+.catspub-directory-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 24px; }
+.catspub-directory-toolbar h2 { font-size: var(--text-lg); font-weight: var(--font-weight-semibold); }
+.catspub-directory-toolbar .btn { display: inline-flex; align-items: center; gap: 7px; }
+.catspub-model-directory section { margin-bottom: 30px; }
+.catspub-model-directory h3 { font-size: var(--text-base); font-weight: var(--font-weight-semibold); margin-bottom: 10px; overflow-wrap: anywhere; }
+.catspub-model-directory h3 span { margin-left: 10px; color: var(--ds-text-muted); font-weight: var(--font-weight-normal); }
+.catspub-model-directory table { width: 100%; border-collapse: collapse; table-layout: fixed; font-size: var(--text-sm); }
+.catspub-model-directory th { text-align: left; color: var(--ds-text-secondary); font-weight: var(--font-weight-medium); }
+.catspub-model-directory td, .catspub-model-directory th { padding: 9px 6px; border-bottom: 1px solid var(--ds-border-subtle); overflow-wrap: anywhere; }
+.catspub-model-directory th:last-child, .catspub-model-directory td:last-child { width: 160px; text-align: right; }
+.catspub-context-select { width: 88px; min-width: 68px; max-width: 100%; font-size: var(--text-xs); padding: 4px 6px; height: 28px; min-height: 28px; }
+@media (max-width: 600px) { .catspub-login { padding-top: 60px; place-items: start center; } .catspub-model-directory th:last-child, .catspub-model-directory td:last-child { width: 104px; } }

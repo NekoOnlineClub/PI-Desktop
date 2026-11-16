@@ -1,4 +1,5 @@
 import { join } from "node:path";
+import { assertCatspubChannel, registerCatspubIpc } from "../catspub/ipc";
 import { dialog, shell, type BrowserWindow, type IpcMain, type IpcMainInvokeEvent } from "electron";
 import { err, ErrorCodes, IPC, ok, type LifecycleDialogChoice, type Result } from "@pi-desktop/shared";
 import type { AgentHostBridge } from "../agent-host-bridge";
@@ -213,6 +214,7 @@ export function registerIpcHandlers(dependencies: RegisterIpcDependencies) {
   const ipcHandlers = new Map<string, (...args: any[]) => Promise<any>>();
   const handle = (channel: string, fn: (...args: any[]) => Promise<any>) => {
     const handler = async (...args: any[]) => {
+      if (dependencies.catspub) assertCatspubChannel(dependencies.catspub, channel);
       const result = await fn(...args);
       traySessions.observeInvoke(channel);
       taskbarUnreadBadge.observeInvoke(channel);
@@ -225,6 +227,7 @@ export function registerIpcHandlers(dependencies: RegisterIpcDependencies) {
     // runs the existing local handler byte-for-byte unchanged.
     ipcMain.handle(channel, async (_event, ...args) =>
       wrap(async () => {
+        if (dependencies.catspub) assertCatspubChannel(dependencies.catspub, channel);
         const router = getBackendRouter?.();
         if (router) {
           const outcome = await router.route(channel, args);
@@ -239,7 +242,10 @@ export function registerIpcHandlers(dependencies: RegisterIpcDependencies) {
     fn: (event: IpcMainInvokeEvent, ...args: any[]) => Promise<any>,
   ) => {
     ipcMain.handle(channel, async (event, ...args) =>
-      wrap(() => fn(event, ...args)),
+      wrap(() => {
+        if (dependencies.catspub) assertCatspubChannel(dependencies.catspub, channel);
+        return fn(event, ...args);
+      }),
     );
   };
   const assertMainWindowSender = (event: IpcMainInvokeEvent): void => {
@@ -269,6 +275,7 @@ export function registerIpcHandlers(dependencies: RegisterIpcDependencies) {
     handleWithEvent,
     assertMainWindowSender,
   };
+  if (dependencies.catspub) registerCatspubIpc(registrar, dependencies.catspub);
 
   registerAppIpc({
     registrar,
@@ -333,6 +340,7 @@ export function registerIpcHandlers(dependencies: RegisterIpcDependencies) {
     getHost,
   });
   registerProviderIpc({
+    catspub: dependencies.catspub,
     registrar,
     getHost,
     modelsDevCatalog,

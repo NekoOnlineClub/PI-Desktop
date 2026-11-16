@@ -1,5 +1,16 @@
 # Unreleased changes
 
+- Updated the Catspub sidebar heading to `Pi-Desktop[Catspub]`, removed its
+  footer version display, and kept model and reasoning labels visible in narrow
+  composer layouts. Human verification is embedded in the sign-in form without
+  opening another window.
+
+- Added the Catspub distribution's account sign-in, entitled models organized
+  by site routing group, per-session context tiers, and a bottom-left profile
+  dialog with user ID, wallet refresh and sign out. Remembered sessions use the
+  Host secret store; existing local chats survive account switches. See the
+  [Catspub client specification](../spec/04-ux/catspub-client.md).
+
 - Fixed MCP servers staying unavailable in project sessions after Test connection
   reported success. Testing now uses the selected project's working directory
   and clears that server's idle failed workspace connections without interrupting

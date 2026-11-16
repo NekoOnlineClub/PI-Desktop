@@ -14,12 +14,7 @@
   }
 }
 
-/*
-  Composer controls share one row, but the model chip is the first surface to
-  give up descriptive text as the chat column gets narrower. Keep the action
-  buttons at their normal hit target and let the combined model/reasoning
-  trigger carry the full selection in its menu and accessible name.
-*/
+/* Keep the selected model and reasoning level visible in narrow chat columns. */
 .composer-left,
 .composer-right {
   min-width: 0;
@@ -40,8 +35,17 @@
 }
 
 @container composer-stack (max-width: 560px) {
-  .composer-model-thinking-level {
-    display: none;
+  .composer-toolbar {
+    flex-wrap: wrap;
+    row-gap: 4px;
+  }
+
+  .composer-right {
+    flex: 1 1 100%;
+  }
+
+  .composer-model-thinking {
+    flex: 0 1 auto;
   }
 
   .composer-model-thinking-model {
@@ -56,25 +60,6 @@
 }
 
 @container composer-stack (max-width: 450px) {
-  .composer-right .composer-model-thinking-chip {
-    width: 32px;
-    max-width: 32px;
-    flex: 0 0 32px;
-    justify-content: center;
-    gap: 0 !important;
-    padding: 0 !important;
-  }
-
-  /* Collapsed to a glyph: the labels are gone, so the icon carries the trigger. */
-  .composer-model-thinking-icon {
-    display: inline-flex;
-  }
-
-  .composer-model-thinking-model,
-  .composer-model-thinking-chevron {
-    display: none;
-  }
-
   .composer-right .context-inspector-trigger {
     gap: 0;
     padding-inline: 3px;

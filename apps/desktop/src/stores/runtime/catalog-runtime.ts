@@ -66,6 +66,7 @@ export function createCatalogRuntime(): CatalogRuntime {
       providerModelsGeneration += 1;
       refreshedProviderModels.clear();
       providerModelRetry.clear();
+      providerModelLoads.clear();
       return providerModelsGeneration;
     },
     providerGeneration: () => providerModelsGeneration,

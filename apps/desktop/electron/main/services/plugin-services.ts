@@ -448,7 +448,7 @@ export function createPluginServices({
       });
       const runtimeProvider = {
         ...launch.sidecarParams.provider,
-        ...(launch.sidecarParams.provider.authKind === OAUTH_AUTH_KIND
+        ...(launch.requestAuth ? { resolveAuth: launch.requestAuth } : launch.sidecarParams.provider.authKind === OAUTH_AUTH_KIND
           ? { resolveAuth: () => vendorOAuth.resolveAuth(launch.providerId) }
           : {}),
       } as RuntimeProviderConfig;
@@ -472,7 +472,7 @@ export function createPluginServices({
         context,
         launch.sidecarParams.thinkingLevel,
         {
-          signal: input.signal,
+          signal: launch.accountSignal ? AbortSignal.any([launch.accountSignal, ...(input.signal ? [input.signal] : [])]) : input.signal,
           sessionId: launchSessionId,
           // Spec 07-plugins/03-plugin-api.md: empty model output answers the
           // plugin with INVALID_ARGUMENT, not the runtime's internal code.

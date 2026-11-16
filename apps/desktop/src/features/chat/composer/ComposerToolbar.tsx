@@ -25,6 +25,7 @@ import {
 import { LiveVoiceControls } from "../../voice/live/LiveVoiceControls";
 import { ComputerUseIndicator } from "../../computer-use/ComputerUseIndicator";
 import { ComposerModelPicker } from "./ComposerModelPicker";
+import { ContextTierSelect } from "../../catspub/ContextTierSelect";
 import type { useComposerModelMenu } from "./hooks/useComposerModelMenu";
 
 type ModelMenuController = ReturnType<typeof useComposerModelMenu>;
@@ -193,6 +194,7 @@ export function ComposerToolbar({
       <div className="composer-right">
         {localToolsAllowed ? <ComposerControlSlots side="right" /> : null}
         {contextUsage ? <ContextUsageInspector {...contextUsage} /> : null}
+        <ContextTierSelect providerId={providerId} modelId={modelId} disabled={controlsBlocked || runActive} />
         <ComposerModelPicker
           t={t}
           controller={modelMenu}

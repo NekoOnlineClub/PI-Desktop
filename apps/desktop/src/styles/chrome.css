@@ -1418,7 +1418,7 @@
   min-width: 0;
   padding: 0 6px 0 4px;
   border-radius: var(--radius-sm);
-  font-size: var(--text-base-plus);
+  font-size: var(--text-base);
   font-weight: var(--font-weight-semibold);
   letter-spacing: 0;
   color: var(--ds-text-primary);
@@ -1427,6 +1427,13 @@
 
 .brand:hover {
   background: var(--ds-bg-hover);
+}
+
+.brand > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .brand-logo {

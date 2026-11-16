@@ -772,6 +772,18 @@ fn fast_mode_param(params: &Value) -> Result<Option<bool>, JsonRpcError> {
     }
 }
 
+fn context_window_param(params: &Value) -> Result<Option<Option<i64>>, JsonRpcError> {
+    match params.get("contextWindowLimit") {
+        None => Ok(None),
+        Some(Value::Null) => Ok(Some(None)),
+        Some(value) => value
+            .as_i64()
+            .filter(|n| [32000, 64000, 128000, 256000, 1000000].contains(n))
+            .map(|n| Some(Some(n)))
+            .ok_or_else(|| rpc_err(1002, "invalid context window tier", "INVALID_PARAMS")),
+    }
+}
+
 /// Parse the optional session thinking selector at the RPC boundary.  A
 /// missing/null value keeps the backwards-compatible default; present values
 /// must be strings from the host's allowlist rather than being silently
@@ -2739,6 +2751,7 @@ async fn handle_request(
             Ok(json!({ "sessions": sessions }))
         }
         "session.create" => {
+            let context_window_limit = context_window_param(&params)?.flatten();
             let thinking_level = thinking_level_param(&params)?;
             let fast_mode = fast_mode_param(&params)?.unwrap_or(false);
             let permission_parent = permission_parent_param(&params)?;
@@ -2803,6 +2816,7 @@ async fn handle_request(
                     thinking_level,
                     permission_mode,
                     fast_mode,
+                    context_window_limit,
                 },
                 params.get("modeSnapshot"),
             )
@@ -2960,6 +2974,7 @@ async fn handle_request(
         }
 
         "session.configure" => {
+            let context_window_limit = context_window_param(&params)?;
             let id = params
                 .get("id")
                 .and_then(|v| v.as_str())
@@ -2982,6 +2997,7 @@ async fn handle_request(
                 params.get("permissionMode").and_then(|v| v.as_str()),
                 fast_mode,
                 prepared.snapshot_hash(),
+                context_window_limit,
             )
             .map_err(|e| {
                 let message = e.to_string();

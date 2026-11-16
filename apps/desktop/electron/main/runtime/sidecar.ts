@@ -1,4 +1,6 @@
 import { IPC, type AgentEventEnvelope, type ComputerGrantView, type UiMessage } from "@pi-desktop/shared";
+import type { CatspubService } from "../catspub/service";
+import { isDynamicProviderAuth } from "@pi-desktop/shared";
 import {
   findSubagentProviderSource,
   modelConfigWithBinding,
@@ -55,6 +57,7 @@ export type SidecarRuntimeDependencies = {
   dataDir: string;
   agentExtensions: AgentExtensionBridge;
   vendorOAuth: VendorOAuth;
+  catspub?: CatspubService;
   listRuntimeProviders: (includeDisabled?: boolean) => Promise<any[]>;
   modelsDevCatalog: ModelsDevCatalog;
   effectiveSubagentModelConfig: (...args: any[]) => any;
@@ -93,6 +96,7 @@ export function createSidecarRuntime({
   dataDir,
   agentExtensions,
   vendorOAuth,
+  catspub,
   listRuntimeProviders,
   modelsDevCatalog,
   effectiveSubagentModelConfig,
@@ -486,7 +490,7 @@ export function createSidecarRuntime({
     },
   });
   s.setVendorAuthResolver(async ({ providerId }) =>
-    vendorOAuth.resolveAuth(providerId),
+    catspub ? catspub.resolveAuth(providerId) : vendorOAuth.resolveAuth(providerId),
   );
   s.setSubagentModelResolver(async (key: string) => {
     const slash = key.indexOf("/");
@@ -511,7 +515,7 @@ export function createSidecarRuntime({
       );
     }
 
-    const isVendorAccount = provider.authKind === OAUTH_AUTH_KIND;
+    const isVendorAccount = isDynamicProviderAuth(provider.authKind);
     let apiKey = "";
     if (!isVendorAccount && provider.authKind !== "none") {
       const secret = await runtimeState.host!.call<{ value?: string }>(
@@ -525,9 +529,13 @@ export function createSidecarRuntime({
     await modelsDevCatalog.ensureLoaded();
     modelsDevCatalog.configureAccount(provider);
     let catalogModelConfig: Parameters<typeof modelConfigWithBinding>[0];
+    let resolvedBaseUrl = provider.baseUrl;
+    let resolvedApiStyle = provider.apiStyle;
     if (isVendorAccount) {
-      const vendorBinding = await vendorOAuth.bindingFor(provider.id, modelId);
+      const vendorBinding = catspub ? await catspub.bindingFor(provider.id, modelId) : await vendorOAuth.bindingFor(provider.id, modelId);
       if (!vendorBinding) throw new Error(`vendor "${provider.name}" does not offer "${modelId}"`);
+      resolvedBaseUrl = vendorBinding.baseUrl ?? resolvedBaseUrl;
+      resolvedApiStyle = vendorBinding.apiStyle ?? resolvedApiStyle;
       catalogModelConfig =
         vendorBinding.modelConfig ?? catalogModelConfigFor(modelsDevCatalog, {
           providerId: provider.id,
@@ -554,11 +562,11 @@ export function createSidecarRuntime({
     return {
       id: provider.id,
       name: provider.name,
-      ...(provider.baseUrl ? { baseUrl: provider.baseUrl } : {}),
+      ...(resolvedBaseUrl ? { baseUrl: resolvedBaseUrl } : {}),
       modelId,
       apiKey,
       ...(provider.authKind ? { authKind: provider.authKind } : {}),
-      ...(provider.apiStyle ? { apiStyle: provider.apiStyle } : {}),
+      ...(resolvedApiStyle ? { apiStyle: resolvedApiStyle } : {}),
       supportsReasoning: capabilities.supportsReasoning,
       supportedThinkingLevels: [...capabilities.supportedThinkingLevels],
       ...(modelConfig ? { modelConfig } : {}),
