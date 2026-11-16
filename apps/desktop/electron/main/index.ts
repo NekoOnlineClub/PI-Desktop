@@ -57,6 +57,9 @@ import { hasSingleInstanceLock, isDevelopmentBuild } from "./installation";
 import { getStorageBootstrap } from "./storage/bootstrap";
 import { createPlanUiProbe } from "./plan-ui-probe";
 import { registerIpcHandlers } from "./ipc/register";
+import { CatspubService } from "./catspub/service";
+import { createCatspubBrowser } from "./catspub/browser";
+import { stopCatspubWork } from "./catspub/stop-work";
 import { createVoiceService } from "./voice-service";
 import { MicrophoneLeaseRegistry } from "./live-voice/microphone-lease";
 import { createLiveCallService } from "./live-voice/runtime";
@@ -365,9 +368,31 @@ const {
   speech,
 } = pluginServices;
 
+const catspub = new CatspubService({
+  call: (method, params) => {
+    const host = getHost();
+    if (!host) return Promise.reject(new Error("host unavailable"));
+    return host.call(method, params as Record<string, unknown>);
+  },
+  models: modelsDevCatalog,
+  browser: createCatspubBrowser(getMainWindow),
+  stopWork: async () => {
+    voiceService.cancel();
+    await Promise.allSettled([
+      liveCallService.endForLifecycle("user-ended"),
+      stopCatspubWork(runtimeState, activeTurns, () => startSidecar(),
+        (sessionId, turnId) => finishTurn(sessionId, "aborted", "CATSPUB_SESSION_EXPIRED", { turnId }),
+        (sessionId) => { plugins.cancelSessionTools(sessionId, "logout"); userMcp.cancelSessionCalls(sessionId); }),
+    ]).then((results) => {
+      const failure = results.find((result) => result.status === "rejected");
+      if (failure?.status === "rejected") throw failure.reason;
+    });
+  },
+});
 const providerCatalogRuntime = createProviderCatalogRuntime({
   getHost,
   modelsDevCatalog,
+  siteProviders: () => catspub.listProviders(),
 });
 const {
   bindingForModel,
@@ -383,6 +408,7 @@ const {
 } = providerCatalogRuntime;
 
 const createdSessionLaunchRuntime = createSessionLaunchRuntime({
+  catspub,
   runtimeState,
   logger,
   userMcp,
@@ -789,6 +815,7 @@ function publishComputerGrant(grant: ComputerGrantView | null): void {
 }
 
 const sidecarRuntime = createSidecarRuntime({
+  catspub,
   runtimeState,
   steeringReplies,
   logger,
@@ -937,6 +964,7 @@ const localApps: LocalAppCatalog = {
 
 function registerIpc() {
   return registerIpcHandlers({
+    catspub,
     modeServices,
     restartForStorage: () => {
       shutdownState.quitConfirmed = true;

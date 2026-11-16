@@ -1,6 +1,23 @@
 import { en, type EnglishCatalog } from "../en/index.js";
 
 export const zhCN = {
+  catspub: {
+    shellName: "Pi-Desktop[Catspub]",
+    humanVerification: "人机验证", captchaVerified: "验证通过", captchaLoading: "正在加载验证...",
+    captchaRetry: "重试验证", captchaRequired: "请先完成人机验证。",
+    catalogError: "可用模型加载失败，请刷新重试。",
+    loginTitle: "登录 Catspub", verifyTitle: "验证身份", signIn: "登录", verify: "验证",
+    username: "用户名", password: "密码", showPassword: "显示密码", hidePassword: "隐藏密码",
+    verificationCode: "动态验证码或恢复码", rememberLogin: "记住登录", cancel: "取消",
+    connecting: "正在连接 Catspub...", retry: "重试", refresh: "刷新", profile: "个人资料",
+    userId: "用户 ID", wallet: "钱包余额", signOut: "退出登录", availableModels: "可用模型",
+    model: "模型", contextWindow: "上下文窗口", autoContext: "自动", estimated: "估算",
+    noModels: "当前账户没有可用模型。", networkError: "无法连接 Catspub，请检查网络后重试。",
+    requestFailed: "请求失败，请检查登录信息或验证码后重试。",
+    cancelled: "已取消登录。", rateLimited: "请求过于频繁，请稍后重试。",
+    sessionExpired: "登录已过期，请重新登录。",
+    localLogoutComplete: "已退出本机登录。由于无法连接服务器，本机专用会话及 API 令牌未能在站点撤销。",
+  },
   worktree: {
     menu: { group: "Git" },
     newIsolatedSession: "新建隔离会话",

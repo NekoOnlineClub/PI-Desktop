@@ -478,6 +478,7 @@ async function dispatchApprovedPlan(rawExecution: unknown): Promise<void> {
       turnId,
     });
     startedApprovedExecutions.add(execution.id);
+    launch.assertCurrentAccount?.();
     const accepted = await runtimeState.sidecar.call<{ accepted: boolean }>(
       "agent.executeApprovedPlan",
       {

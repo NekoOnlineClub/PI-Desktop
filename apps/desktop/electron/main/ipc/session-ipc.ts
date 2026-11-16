@@ -697,10 +697,14 @@ export function registerSessionIpc({
         thinkingLevel?: SessionThinkingLevel;
         permissionMode?: "inherit" | "ask" | "accept-edits" | "auto";
         fastMode?: boolean;
+        contextWindowLimit?: number | null;
       },
     ) => {
       rejectNativeMutation(id, "configuration");
       if (!host) throw new Error("host unavailable");
+      if (config.contextWindowLimit !== undefined && activeTurns.has(id)) {
+        throw Object.assign(new Error("Context cannot change during a running turn"), { errorCode: "AGENT_BUSY" });
+      }
       // Every mode other than the builtin Agent and Plan carries the parsed
       // definition; the Host persists it as the session's policy snapshot.
       const modeSnapshot = await modeCatalog.snapshotFor(config.mode);

@@ -9,6 +9,7 @@ import { DEFAULT_CONTEXT_WINDOW, resolveKnownContextWindow } from "./context-usa
 import { getSessionMessageSnapshot } from "./session-transcript-updates";
 import { getTranscriptProjection } from "./transcript-projection";
 import { getAssistantTurnSummary } from "./transcript-summary";
+import { sessionContextWindow } from "@pi-desktop/shared";
 
 export type LatestTurnContextInspector = {
   usage: MessageUsage;
@@ -44,7 +45,7 @@ export function latestTurnContextInspector(
   providerModels: Record<string, ModelInfo[]>,
   providers: ProviderPublic[],
   compactions?: readonly ContextCompactionMark[],
-  currentModel?: { providerId?: string; modelId?: string },
+  currentModel?: { providerId?: string; modelId?: string; contextWindowLimit?: number | null },
 ): LatestTurnContextInspector | undefined {
   const compaction = compactions?.at(-1);
   let latestUsageMessage: UiMessage | undefined;
@@ -92,7 +93,7 @@ export function latestTurnContextInspector(
   const result: LatestTurnContextInspector = {
     usage: latestUsage,
     turnUsage: latestTurn?.usage ?? latestUsage,
-    contextWindow: knownContextWindow ?? DEFAULT_CONTEXT_WINDOW,
+    contextWindow: sessionContextWindow(knownContextWindow ?? DEFAULT_CONTEXT_WINDOW, currentModel?.contextWindowLimit),
     ...(knownContextWindow === undefined ? { contextWindowEstimated: true } : {}),
     tools: latestTurn?.tools ?? [],
     responseDurationMs: latestTurn?.responseDurationMs,

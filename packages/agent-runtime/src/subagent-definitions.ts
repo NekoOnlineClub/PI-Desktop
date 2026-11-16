@@ -479,7 +479,7 @@ export async function resolveSubagentProviders(input: {
       );
       continue;
     }
-    const isVendorAccount = provider.authKind === OAUTH_AUTH_KIND;
+    const isVendorAccount = provider.authKind === OAUTH_AUTH_KIND || provider.authKind === "catspub";
     if (!isVendorAccount && !secrets.has(provider.id)) {
       try {
         secrets.set(provider.id, await input.getSecret(provider.id));

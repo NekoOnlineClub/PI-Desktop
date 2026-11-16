@@ -212,6 +212,9 @@ export type ContextWindowSource = ModelLimitSource;
 /** Provider-local model settings persisted with the provider configuration. */
 export type ModelBinding = {
   id: string;
+  /** Managed site directory metadata; permissions still come from the site. */
+  contextWindowEstimated?: boolean;
+  apiStyle?: string;
   /** Optional display alias. When set it names the model everywhere the UI
    * shows a model label; the id remains the wire identity. */
   alias?: string;

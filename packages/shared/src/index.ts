@@ -1,4 +1,5 @@
 export * from "./activation.js";
+export * from "./catspub.js";
 export * from "./protocol.js";
 export * from "./file-batches.js";
 export * from "./background-jobs.js";

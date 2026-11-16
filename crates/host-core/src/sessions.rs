@@ -156,6 +156,8 @@ pub struct SessionSummary {
     /// use the priority tier only when the model binding also allows it.
     #[serde(default)]
     pub fast_mode: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub context_window_limit: Option<i64>,
     pub updated_at: String,
     pub created_at: String,
     /// True when this session is the transcript owned by a scheduled-task run.
@@ -1390,7 +1392,7 @@ const SUMMARY_SELECT: &str =
     "SELECT s.id, s.title, s.last_seq, p.path, s.model_id, s.provider_id, s.mode,
             s.thinking_level, s.permission_mode, s.updated_at, s.created_at,
             EXISTS (SELECT 1 FROM task_runs r WHERE r.session_id = s.id) AS scheduled_run,
-            s.fast_mode
+            s.fast_mode, s.context_window_limit
      FROM sessions s LEFT JOIN projects p ON p.id = s.project_id
      WHERE s.deleted_at IS NULL";
 
@@ -1411,6 +1413,7 @@ pub(crate) fn summary_from_row(row: &rusqlite::Row<'_>) -> rusqlite::Result<Sess
         // alias keeps this mapper independent of any one query's column order.
         scheduled_run: row.get("scheduled_run")?,
         fast_mode: row.get("fast_mode")?,
+        context_window_limit: row.get("context_window_limit")?,
         worktree: None,
     })
 }
@@ -1468,6 +1471,7 @@ pub struct SessionCreateOptions {
     pub permission_mode: Option<String>,
     /// The `/fast` switch (ADR 0334); false keeps the default service tier.
     pub fast_mode: bool,
+    pub context_window_limit: Option<i64>,
 }
 
 pub fn create_session_with_thinking(
@@ -1490,6 +1494,7 @@ pub fn create_session_with_thinking(
             thinking_level,
             permission_mode: None,
             fast_mode: false,
+            context_window_limit: None,
         },
     )
 }
@@ -1522,7 +1527,13 @@ pub fn create_session_with_mode_snapshot(
         thinking_level,
         permission_mode,
         fast_mode,
+        context_window_limit,
     } = options;
+    if let Some(limit) = context_window_limit {
+        if ![32000, 64000, 128000, 256000, 1000000].contains(&limit) {
+            return Err(anyhow!("invalid context window tier"));
+        }
+    }
     let now = now_ms();
     let id = Uuid::new_v4().to_string();
     let title = title.unwrap_or_else(|| "New task".into());
@@ -1562,8 +1573,8 @@ pub fn create_session_with_mode_snapshot(
         .prepare_cached(
             "INSERT INTO sessions (
                 id, title, project_id, provider_id, model_id, mode, thinking_level,
-                permission_mode, title_source, fast_mode, created_at, updated_at, mode_snapshot_hash
-             ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?11, ?12)",
+                permission_mode, title_source, fast_mode, created_at, updated_at, mode_snapshot_hash, context_window_limit
+             ) VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?11, ?12, ?13)",
         )?
         .execute(params![
             id,
@@ -1577,7 +1588,8 @@ pub fn create_session_with_mode_snapshot(
             title_source,
             fast_mode,
             now,
-            prepared.as_ref().and_then(|value| value.snapshot_hash())
+            prepared.as_ref().and_then(|value| value.snapshot_hash()),
+            context_window_limit
         ])?;
     if let Some(transaction) = transaction {
         transaction.commit()?;
@@ -1594,6 +1606,7 @@ pub fn create_session_with_mode_snapshot(
         permission_mode,
         fast_mode,
         updated_at: ms_to_ts(now),
+        context_window_limit,
         created_at: ms_to_ts(now),
         // The run row that owns this transcript is written after creation.
         scheduled_run: false,
@@ -1943,11 +1956,11 @@ pub fn fork_session_through(
             .prepare_cached(
                 "INSERT INTO sessions (
                     id, title, project_id, provider_id, model_id, mode, thinking_level,
-                    permission_mode, fast_mode, mode_snapshot_hash, source, pinned, last_seq,
+                    permission_mode, fast_mode, context_window_limit, mode_snapshot_hash, source, pinned, last_seq,
                     created_at, updated_at
                  )
                  SELECT ?1, ?2, project_id, provider_id, model_id, mode, thinking_level,
-                        permission_mode, fast_mode, mode_snapshot_hash, NULL, 0, ?3, ?4, ?4
+                        permission_mode, fast_mode, context_window_limit, mode_snapshot_hash, NULL, 0, ?3, ?4, ?4
                  FROM sessions WHERE id = ?5",
             )?
             .execute(params![id, title, records.len() as i64, now, source_id])?;
@@ -1978,6 +1991,7 @@ pub fn fork_session_through(
         thinking_level: source.summary.thinking_level,
         permission_mode: source.summary.permission_mode,
         fast_mode: source.summary.fast_mode,
+        context_window_limit: source.summary.context_window_limit,
         updated_at: created_at.clone(),
         created_at,
         // A fork is the user's own conversation, not the automation's transcript.
@@ -2059,6 +2073,7 @@ pub fn configure_session_with_fast_mode(
         permission_mode,
         fast_mode,
         None,
+        None,
     )
 }
 
@@ -2075,7 +2090,13 @@ pub fn configure_session_with_mode_snapshot(
     permission_mode: Option<&str>,
     fast_mode: Option<bool>,
     mode_snapshot_hash: Option<&str>,
+    context_window_limit: Option<Option<i64>>,
 ) -> Result<Option<SessionSummary>> {
+    if let Some(Some(limit)) = context_window_limit {
+        if ![32000, 64000, 128000, 256000, 1000000].contains(&limit) {
+            return Err(anyhow!("invalid context window tier"));
+        }
+    }
     if !(is_valid_mode(mode) || mode == "chat") {
         return Err(anyhow!("mode must be a valid mode id"));
     }
@@ -2104,6 +2125,7 @@ pub fn configure_session_with_mode_snapshot(
                  thinking_level = COALESCE(?5, thinking_level),
                  permission_mode = COALESCE(?6, permission_mode),
                  fast_mode = COALESCE(?8, fast_mode), mode_snapshot_hash = ?9,
+                 context_window_limit = CASE WHEN ?10 THEN ?11 ELSE context_window_limit END,
                  updated_at = ?7
              WHERE id = ?1",
         )?
@@ -2116,7 +2138,9 @@ pub fn configure_session_with_mode_snapshot(
             permission_mode,
             now_ms(),
             fast_mode,
-            mode_snapshot_hash
+            mode_snapshot_hash,
+            context_window_limit.is_some(),
+            context_window_limit.flatten()
         ])?;
     if changed == 0 {
         return Ok(None);
@@ -5202,6 +5226,99 @@ mod tests {
     }
 
     #[test]
+    fn session_context_tier_is_preserved_forked_reset_and_reopened() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("pi.sqlite");
+        let db = Database::open(&path).unwrap();
+        let session = create_session(&db, None, None, None, None, None).unwrap();
+        assert_eq!(session.context_window_limit, None);
+        let configure = |value: Option<Option<i64>>| {
+            configure_session_with_mode_snapshot(
+                &db,
+                &session.id,
+                "agent",
+                None,
+                None,
+                None,
+                None,
+                None,
+                None,
+                value,
+            )
+        };
+        for tier in [32000, 64000, 128000, 256000, 1000000] {
+            assert_eq!(
+                configure(Some(Some(tier)))
+                    .unwrap()
+                    .unwrap()
+                    .context_window_limit,
+                Some(tier)
+            );
+        }
+        assert!(configure(Some(Some(123))).is_err());
+        assert_eq!(
+            configure(None).unwrap().unwrap().context_window_limit,
+            Some(1000000)
+        );
+        let ForkSessionResult::Created(fork) =
+            fork_session_through(&db, &session.id, None, None).unwrap()
+        else {
+            panic!("expected fork")
+        };
+        assert_eq!(fork.summary.context_window_limit, Some(1000000));
+        assert_eq!(
+            configure(Some(None)).unwrap().unwrap().context_window_limit,
+            None
+        );
+        let created = create_session_with_options(
+            &db,
+            SessionCreateOptions {
+                context_window_limit: Some(32000),
+                ..Default::default()
+            },
+        )
+        .unwrap();
+        assert!(create_session_with_options(
+            &db,
+            SessionCreateOptions {
+                context_window_limit: Some(123),
+                ..Default::default()
+            }
+        )
+        .is_err());
+        assert!(list_sessions(&db)
+            .unwrap()
+            .iter()
+            .any(|row| row.id == created.id && row.context_window_limit == Some(32000)));
+        drop(db);
+        let reopened = Database::open(&path).unwrap();
+        assert_eq!(
+            get_session(&reopened, &created.id)
+                .unwrap()
+                .unwrap()
+                .summary
+                .context_window_limit,
+            Some(32000)
+        );
+        assert_eq!(
+            get_session(&reopened, &fork.summary.id)
+                .unwrap()
+                .unwrap()
+                .summary
+                .context_window_limit,
+            Some(1000000)
+        );
+        assert_eq!(
+            get_session(&reopened, &session.id)
+                .unwrap()
+                .unwrap()
+                .summary
+                .context_window_limit,
+            None
+        );
+    }
+
+    #[test]
     fn create_session_permission_mode_is_optional_and_validated() {
         let db = test_db();
         let default_session = create_session(&db, None, None, None, None, None).unwrap();
@@ -5495,6 +5612,7 @@ mod tests {
             scheduled_run: false,
             fast_mode: false,
             worktree: None,
+            context_window_limit: None,
             created_at: "2025-01-01T00:00:00Z".into(),
             updated_at: "2025-01-02T00:00:00Z".into(),
         };
@@ -5549,6 +5667,7 @@ mod tests {
             scheduled_run: false,
             fast_mode: false,
             worktree: None,
+            context_window_limit: None,
             created_at: "2025-01-01T00:00:00Z".into(),
             updated_at: "2025-01-01T00:00:00Z".into(),
         };
@@ -6805,6 +6924,7 @@ mod tests {
             scheduled_run: false,
             fast_mode: false,
             worktree: None,
+            context_window_limit: None,
             created_at: "2025-01-01T00:00:00Z".into(),
             updated_at: "2025-01-01T00:00:00Z".into(),
         };

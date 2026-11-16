@@ -46,6 +46,8 @@ import { subscribeLiveSessionEvents, type LiveSessionWorkEvent } from "./live-se
 
 type LaunchResult = {
   providerId: string;
+  requestAuth?: () => Promise<{ apiKey: string }>;
+  accountSignal?: AbortSignal;
   sidecarParams: {
     provider: RuntimeProviderConfig;
   };
@@ -522,7 +524,7 @@ export function createLiveWorkBridge(input: {
       signal.throwIfAborted();
       const provider = {
         ...launch.sidecarParams.provider,
-        ...(launch.sidecarParams.provider.authKind === OAUTH_AUTH_KIND
+        ...(launch.requestAuth ? { resolveAuth: launch.requestAuth } : launch.sidecarParams.provider.authKind === OAUTH_AUTH_KIND
           ? { resolveAuth: () => input.vendorOAuth.resolveAuth(launch.providerId) }
           : {}),
       };
@@ -532,7 +534,7 @@ export function createLiveWorkBridge(input: {
       };
       const result = await (input.completeIntent ?? completeOneShot)(provider, context, "off", {
         sessionId: classifierSessionId,
-        signal,
+        signal: launch.accountSignal ? AbortSignal.any([signal, launch.accountSignal]) : signal,
         maxOutputTokens: 1_024,
       });
       signal.throwIfAborted();

@@ -4706,12 +4706,16 @@ Do not invent objections or turn speculative risks into blockers. Stop when the 
         // pi-ai can obtain short-lived credentials per request. The JSON-RPC
         // result does not carry the callback, so we attach one that calls
         // back to Electron main — the same pattern sidecar.ts uses at launch.
-        if (provider.authKind === OAUTH_AUTH_KIND) {
+        if (provider.authKind === OAUTH_AUTH_KIND || provider.authKind === "catspub") {
           provider.resolveAuth = () =>
             (this.host as any).call("provider.resolveAuth", {
               sessionId: this.sessionId,
               providerId: provider.id,
             });
+        }
+        if (provider.modelConfig && this.provider.modelConfig) {
+          provider.modelConfig = { ...provider.modelConfig,
+            contextWindow: Math.min(provider.modelConfig.contextWindow, this.provider.modelConfig.contextWindow) };
         }
         grants[key] = provider;
         return provider;

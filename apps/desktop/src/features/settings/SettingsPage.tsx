@@ -36,7 +36,7 @@ import {
   IconWorkflow,
 } from "../../components/icons";
 import { Badge, Button, cx } from "../../components/ui";
-import { ModelConfigPage } from "../../components/settings/ModelConfigPage";
+import { SiteModelsPage as ModelConfigPage } from "../catspub/SiteModelsPage";
 import { KeyboardShortcutsSection } from "../../components/settings/KeyboardShortcutsSection";
 import { ProjectsPage } from "../../pages/ProjectsPage";
 import { AgentSkillsPage } from "../../components/settings/AgentSkillsPage";

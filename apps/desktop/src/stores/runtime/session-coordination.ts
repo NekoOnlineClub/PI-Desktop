@@ -321,6 +321,7 @@ export function createSessionCoordination({
         thinkingLevel: draftConfig?.thinkingLevel ?? defaultThinkingLevel,
         permissionMode: draftConfig?.permissionMode,
         ...(draftConfig?.fastMode ? { fastMode: true } : {}),
+        ...(draftConfig?.contextWindowLimit !== undefined ? { contextWindowLimit: draftConfig.contextWindowLimit } : {}),
         providerId: inherited.providerId,
         modelId: inherited.modelId,
         projectPath: projectPath ?? undefined,

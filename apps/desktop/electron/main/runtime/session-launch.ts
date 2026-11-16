@@ -1,4 +1,6 @@
 import { join } from "node:path";
+import { isDynamicProviderAuth, sessionContextWindow } from "@pi-desktop/shared";
+import type { CatspubService } from "../catspub/service";
 import {
   GEN_UI_DIRECTORY_NAME,
   ErrorCodes as SharedErrorCodes,
@@ -61,6 +63,7 @@ export type SessionLaunchRuntimeDependencies = {
   sessionProjects: Map<string, string | null>;
   dataDir: string;
   vendorOAuth: VendorOAuth;
+  catspub?: CatspubService;
   modelsDevCatalog: ModelsDevCatalog;
   getWorkspacePath: () => string | null;
   pluginActiveInProject: (
@@ -90,6 +93,7 @@ export function createSessionLaunchRuntime({
   sessionProjects,
   dataDir,
   vendorOAuth,
+  catspub,
   modelsDevCatalog,
   getWorkspacePath,
   pluginActiveInProject,
@@ -335,6 +339,8 @@ export function createSessionLaunchRuntime({
     } = {},
   ) {
     if (!runtimeState.host) throw new Error("host unavailable");
+    const accountGeneration = catspub?.generation();
+    const accountSignal = catspub?.accountSignal();
     await modelsDevCatalog.ensureLoaded();
     const remoteWorkspace = session.remoteWorkspace as { hostKey: string; path: string } | undefined;
     const remoteBoot = remoteWorkspace ? getActiveRemoteHostsBoot() : null;
@@ -342,13 +348,13 @@ export function createSessionLaunchRuntime({
     const commandShell = remoteWorkspace
       ? await remoteBoot!.workspaceCommandShell(remoteWorkspace.hostKey)
       : (await resolveEffectiveCommandShell()).effective!;
-    const providers = await runtimeState.host!.call<{ providers: RuntimeProvider[] }>(
+    const providers = catspub ? { providers: await catspub.listProviders() } : await runtimeState.host!.call<{ providers: RuntimeProvider[] }>(
       "providers.list",
       { includeDisabled: false },
     );
     for (const row of providers.providers) modelsDevCatalog.configureAccount(row);
     const requestedProviderId = overrides.providerId ?? session.providerId;
-    const extensionAgentKey = requestedProviderId
+    const extensionAgentKey = !catspub && requestedProviderId
       ? trustedExtensionAgentKeyFromProviderId(requestedProviderId)
       : undefined;
     const provider: RuntimeProvider = extensionAgentKey
@@ -376,7 +382,7 @@ export function createSessionLaunchRuntime({
     // Plugin-owned agents resolve credentials and transport inside the trusted
     // extension; the host never reads or injects a secret for them.
     const isExtensionAgent = Boolean(extensionAgentKey);
-    const isVendorAccount = !isExtensionAgent && provider.authKind === OAUTH_AUTH_KIND;
+    const isVendorAccount = !isExtensionAgent && isDynamicProviderAuth(provider.authKind);
     const secret = isExtensionAgent || isVendorAccount
       ? { value: undefined }
       : await runtimeState.host!.call<{ value?: string }>("providers.getSecret", {
@@ -415,7 +421,7 @@ export function createSessionLaunchRuntime({
     // and wire endpoint. models.dev owns metadata; one account can span multiple
     // wire APIs and gateway catalogs.
     const vendorBinding = isVendorAccount
-      ? await vendorOAuth
+      ? catspub ? await catspub.bindingFor(provider.id, modelId) : await vendorOAuth
           .bindingFor(provider.id, modelId)
           .catch(() => undefined)
       : undefined;
@@ -443,9 +449,13 @@ export function createSessionLaunchRuntime({
     // row that would undo it (#2120). The subagent path and enrichProvider
     // already apply the binding; the main session was the one path that
     // dropped it. Without a stored binding the catalog answer stands.
-    const modelConfig = storedModel
+    const boundModelConfig = storedModel
       ? modelConfigWithBinding(catalogModelConfig, storedModel)
       : catalogModelConfig;
+    const modelConfig = { ...boundModelConfig,
+      contextWindow: sessionContextWindow(boundModelConfig.contextWindow, session.contextWindowLimit),
+      maxTokens: Math.min(boundModelConfig.maxTokens, sessionContextWindow(boundModelConfig.contextWindow, session.contextWindowLimit)),
+    };
     const thinkingCapabilities = capabilitiesFromModelConfig(modelConfig);
     const thinkingLevel = clampThinkingLevel(
       thinkingCapabilities,
@@ -590,7 +600,7 @@ export function createSessionLaunchRuntime({
       getSecret: async (id: string) =>
         (await runtimeState.host!.call<{ value?: string }>("providers.getSecret", { id })).value,
       resolveVendorBinding: (pinned, pinnedModelId) =>
-        vendorOAuth.bindingFor(pinned.id, pinnedModelId),
+        catspub ? catspub.bindingFor(pinned.id, pinnedModelId) : vendorOAuth.bindingFor(pinned.id, pinnedModelId),
       resolveModel: async (pinned, pinnedModelId) => {
         const catalogModelConfig = catalogModelConfigFor(modelsDevCatalog, {
           providerId: pinned.id,
@@ -634,7 +644,7 @@ export function createSessionLaunchRuntime({
           subagentModelKeys.push(key);
           continue; // already resolved, and independently opted in
         }
-        const isVendorAccount = row.authKind === OAUTH_AUTH_KIND;
+        const isVendorAccount = isDynamicProviderAuth(row.authKind);
         let apiKey = "";
         if (!isVendorAccount && row.authKind !== "none") {
           try {
@@ -651,7 +661,7 @@ export function createSessionLaunchRuntime({
         }
         let catalogModelConfig: Parameters<typeof modelConfigWithBinding>[0];
         if (isVendorAccount) {
-          const vb = await vendorOAuth.bindingFor(row.id, binding.id);
+          const vb = catspub ? await catspub.bindingFor(row.id, binding.id) : await vendorOAuth.bindingFor(row.id, binding.id);
           if (!vb) continue;
           catalogModelConfig =
             vb.modelConfig ?? catalogModelConfigFor(modelsDevCatalog, {
@@ -699,6 +709,11 @@ export function createSessionLaunchRuntime({
       ...subagentCatalog.diagnostics,
       ...subagentBindings.diagnostics,
     ];
+    // Workers obey the same per-session context ceiling as their parent.
+    for (const worker of Object.values(subagentBindings.providers)) {
+      if (worker.modelConfig) worker.modelConfig = { ...worker.modelConfig,
+        contextWindow: sessionContextWindow(worker.modelConfig.contextWindow, session.contextWindowLimit) };
+    }
     if (subagentDiagnostics.length > 0) {
       logger.app("session", "warn", "subagent definitions have problems", {
         sessionId,
@@ -717,7 +732,7 @@ export function createSessionLaunchRuntime({
       ]
         .map((id) => providers.providers.find((row) => row.id === id))
         .flatMap((row) =>
-          row?.authKind === OAUTH_AUTH_KIND
+          row && isDynamicProviderAuth(row.authKind)
             ? [{ providerId: row.id }]
             : [],
         ),
@@ -741,11 +756,17 @@ export function createSessionLaunchRuntime({
         });
       }
     }
+    if (catspub) catspub.assertGeneration(accountGeneration!);
     return {
       providerId: provider.id,
       modelId,
       projectPath,
       workspaceRoot,
+      ...(catspub ? {
+        assertCurrentAccount: () => catspub.assertGeneration(accountGeneration!),
+        requestAuth: () => { catspub.assertGeneration(accountGeneration!); return catspub.resolveAuth(provider.id); },
+        accountSignal,
+      } : {}),
       sidecarParams: {
         sessionId,
         mode,

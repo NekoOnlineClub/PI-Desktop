@@ -168,7 +168,7 @@ function withVendorAuth<T extends RuntimeProviderConfig>(
   sessionId: string,
   provider: T,
 ): T {
-  if (provider?.authKind !== OAUTH_AUTH_KIND) return provider;
+  if (provider?.authKind !== OAUTH_AUTH_KIND && provider?.authKind !== "catspub") return provider;
   return {
     ...provider,
     resolveAuth: () =>
@@ -226,6 +226,7 @@ async function runtimeFor(
     !provider?.modelId ||
     (!provider.apiKey &&
       provider.authKind !== "none" &&
+      provider.authKind !== "catspub" &&
       provider.authKind !== OAUTH_AUTH_KIND)
   ) {
     throw Object.assign(new Error("model/provider not configured"), {

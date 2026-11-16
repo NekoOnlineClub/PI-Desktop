@@ -156,6 +156,16 @@ const transcriptReading = createTranscriptReadingRuntime(runtimeStoreAccess, api
  */
 let bootstrapGeneration = 0;
 
+/** Invalidate account-owned catalogs while retaining shared local projects and history. */
+export function resetAccountCatalog(): void {
+  ++bootstrapGeneration;
+  catalogRuntime.beginProviderRefresh();
+  sessionRuntime.beginNavigationIntent();
+  sessionRuntime.pendingSessionConfigurations.clear();
+  useAppStore.setState({ ready: false, providers: [], providerModels: {}, draftConfiguration: null,
+    runningSessions: {}, agentStatuses: {}, isRunning: false, queuedPrompts: {}, pendingPermissions: {}, pendingAsks: {} });
+}
+
 export const useAppStore = create<AppState>((set, get) => {
   storeAccess = { get, set };
   return {

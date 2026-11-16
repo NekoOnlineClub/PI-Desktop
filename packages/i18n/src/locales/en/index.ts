@@ -1,4 +1,21 @@
 export const en = {
+  catspub: {
+    shellName: "Pi-Desktop[Catspub]",
+    humanVerification: "Human verification", captchaVerified: "Verified", captchaLoading: "Loading verification...",
+    captchaRetry: "Retry verification", captchaRequired: "Complete human verification before signing in.",
+    catalogError: "Unable to load available models. Retry using Refresh.",
+    loginTitle: "Sign in to Catspub", verifyTitle: "Verify your identity", signIn: "Sign in", verify: "Verify",
+    username: "Username", password: "Password", showPassword: "Show password", hidePassword: "Hide password",
+    verificationCode: "Authenticator or recovery code", rememberLogin: "Remember me", cancel: "Cancel",
+    connecting: "Connecting to Catspub...", retry: "Retry", refresh: "Refresh", profile: "Profile",
+    userId: "User ID", wallet: "Wallet balance", signOut: "Sign out", availableModels: "Available models",
+    model: "Model", contextWindow: "Context window", autoContext: "Auto", estimated: "estimated",
+    noModels: "No models available for this account.", networkError: "Unable to connect to Catspub. Check your connection and retry.",
+    requestFailed: "The request failed. Check your credentials or verification code and retry.",
+    cancelled: "Sign-in cancelled.", rateLimited: "Too many requests. Please try again later.",
+    sessionExpired: "Your session expired. Sign in again.",
+    localLogoutComplete: "Signed out locally. The server could not be reached to revoke this device's session and API tokens.",
+  },
   worktree: {
     menu: { group: "Git" },
     newIsolatedSession: "New isolated session",

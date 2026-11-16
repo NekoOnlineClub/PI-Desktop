@@ -9,6 +9,7 @@ import {
   type OAuthRespondInput,
 } from "@pi-desktop/shared";
 import { OAUTH_AUTH_KIND, type VendorOAuth } from "../oauth";
+import type { CatspubService } from "../catspub/service";
 import { probeProviderEndpoint } from "../model-discovery";
 import {
   probeDiscoveryCandidates,
@@ -59,6 +60,7 @@ type RuntimeProvider = {
 };
 
 export type ProviderIpcDependencies = {
+  catspub?: CatspubService;
   registrar: IpcRegistrar;
   getHost: () => HostProcess | null;
   modelsDevCatalog: Pick<
@@ -86,6 +88,7 @@ export type ProviderIpcDependencies = {
 
 /** Register provider catalog, model discovery, OAuth and secret channels. */
 export function registerProviderIpc({
+  catspub,
   registrar,
   getHost,
   modelsDevCatalog,
@@ -309,6 +312,7 @@ export function registerProviderIpc({
   // Vendor-account login. The renderer drives the conversation but never sees
   // credential material: it gets progress events and a provider row id.
   handle(IPC.invoke.providersOauthVendors, async () => {
+    if (catspub) return { vendors: [] };
     return { vendors: await vendorOAuth.listVendors() };
   });
   handle(IPC.invoke.providersOauthStart, async (vendorId: unknown) => {
@@ -350,6 +354,17 @@ export function registerProviderIpc({
     ) => {
       if (!host) throw new Error("host unavailable");
       const req = typeof input === "string" ? { providerId: input } : input ?? {};
+      if (catspub) {
+        const provider = (await catspub.listProviders()).find((row) => row.id === req.providerId);
+        if (!provider) return { models: [], source: "remote" as const };
+        return { source: "remote" as const, models: provider.models.map((binding) => {
+          const metadata = modelsDevCatalog.findModel({ vendorKey: "custom", modelId: binding.id });
+          return { ...(metadata ? modelInfoFromModelsDev(metadata, provider.id) : {
+            modelId: binding.id, displayName: binding.id, providerId: provider.id, capabilities: ["text"], source: "discovered",
+          }), modelId: binding.id, contextWindow: binding.contextWindow, maxTokens: binding.maxTokens,
+            discoveryState: "published", supportedThinkingLevels: binding.thinkingLevels };
+        }) };
+      }
       const providers = req.source === "cache"
         ? (await host.call<{ providers: RuntimeProvider[] }>("providers.list", {
             includeDisabled: true,

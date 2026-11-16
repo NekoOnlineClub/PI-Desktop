@@ -101,7 +101,6 @@ import {
   type SidebarMenuPanelContent,
 } from "../lib/sidebar-menu";
 import { useArmedDelete } from "../hooks/use-armed-delete";
-import { useUpdateState } from "../hooks/use-update-state";
 import { ProjectDeleteDialog } from "./ProjectDeleteDialog";
 import { ProjectEditDialog } from "./ProjectEditDialog";
 import { SessionRenameDialog } from "./SessionRenameDialog";
@@ -308,10 +307,7 @@ export function Sidebar({
   const setProjectSort = useAppStore((s) => s.setProjectSort);
   const reorderProjects = useAppStore((s) => s.reorderProjects);
   const showToast = useAppStore((s) => s.showToast);
-  const version = useAppStore((s) => s.version);
   const setSettingsTab = useAppStore((s) => s.setSettingsTab);
-  const setSettingsAnchor = useAppStore((s) => s.setSettingsAnchor);
-  const update = useUpdateState();
 
   const [sortOpen, setSortOpen] = useState(false);
   const [sessionMenu, setSessionMenu] = useState<string | null>(null);
@@ -667,21 +663,6 @@ export function Sidebar({
     sortOpen,
   ]);
 
-  // An update only earns the accent dot once it is actionable — a pending
-  // check or a failed one keeps the chip quiet.
-  const updateReady =
-    update?.status === "available" || update?.status === "downloaded";
-  const appVersion = update?.currentVersion || version?.version || "";
-  const buildLabel = updateReady
-    ? `v${update?.availableVersion ?? appVersion}`
-    : update?.status === "checking"
-      ? t("updates.checking")
-      : appVersion
-        ? `v${appVersion}`
-        : t("nav.buildUnknown");
-  const buildTitle = updateReady
-    ? t("updates.available", { version: update?.availableVersion ?? "" })
-    : t("nav.checkForUpdates");
   const taskTitle = useCallback((title?: string | null) => {
     const value = (title || "").trim();
     return isDefaultSessionTitle(value) ? t("chat.untitledTask") : value;
@@ -2578,7 +2559,7 @@ export function Sidebar({
           onClick={() => setPage("chat")}
         >
           <BrandLogo size={20} />
-          <span>{t("app.shellName")}</span>
+          <span>{t("catspub.shellName")}</span>
         </TooltipButton>
         <div className="sidebar-header-actions no-drag">
           <TooltipButton
@@ -2765,6 +2746,7 @@ export function Sidebar({
 
         <div className="sidebar-footer no-drag">
           <div className="footer-actions">
+            <ProfileButton />
             <TooltipButton
               type="button"
               className={`footer-action ${page === "settings" ? "active" : ""}`}
@@ -2805,28 +2787,6 @@ export function Sidebar({
             <NotificationCenter onBeforeOpen={() => closeMenus(false)} />
           </div>
 
-          <TooltipButton
-            type="button"
-            className={`footer-build ${updateReady ? "has-update" : ""}`}
-            data-nav="build"
-            tooltip={buildTitle}
-            ariaLabel={buildTitle}
-            onClick={() => {
-              if (updateReady) {
-                setSettingsAnchor("updates.title");
-                setSettingsTab("about");
-                return;
-              }
-              void (async () => {
-                try {
-                  await api.updatesCheck();
-                } catch { /* ignore */ }
-              })();
-            }}
-          >
-            <span className="footer-build-version">{buildLabel}</span>
-            {updateReady ? <span className="footer-build-dot" aria-hidden /> : null}
-          </TooltipButton>
         </div>
       </div>
       {renderFloatingMenu()}
@@ -2912,3 +2872,4 @@ export function Sidebar({
     </aside>
   );
 }
+import { ProfileButton } from "../features/catspub/ProfileButton";

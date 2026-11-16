@@ -41,6 +41,7 @@ async fn env() -> Env {
                 thinking_level: None,
                 permission_mode: None,
                 fast_mode: false,
+                context_window_limit: None,
             },
         )
         .unwrap()

@@ -63,6 +63,8 @@ export type SessionSummary = {
    * omit it, meaning off.
    */
   fastMode?: boolean;
+  /** Null/absent selects the model's full window. Applied on the next turn. */
+  contextWindowLimit?: number | null;
   /** Effective capability for this session's exact provider/model pair. */
   supportsReasoning?: boolean;
   /** Effective image-input capability for this session's exact model. */
